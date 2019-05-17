@@ -1,0 +1,121 @@
+---
+title: "Transportation and Assignment"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    highlight: textmate
+    theme: cerulean
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+dir.create("images")
+```
+
+***
+Module formulation for the shipping data of P&T Co. is given below, and read through the LP file.
+```
+/* Objective function */
+min: 464 x11 + 513 x12 + 654 x13 + 867 x14 + 352 x21 + 416 x22 + 690 x23 + 791 x24 + 995 x31 + 682 x32 + 388 x33 + 685 x34;
+
+/* Constraints */
+x11 + x12 + x13 + x14 = 75;
+x21 + x22 + x23 + x24 = 125;
+x31 + x32 + x33 + x34 = 100;
+x11 + x21 + x31 = 80;
+x12 + x22 + x32 = 65;
+x13 + x23 + x33 = 70;
+x14 + x24 + x34 = 85;
+```
+
+```{r}
+library(lpSolveAPI)
+x <- read.lp("PT_Transportation.lp")
+x
+```
+
+
+```{r}
+solve(x)
+get.objective(x)
+get.variables(x)
+get.constraints(x)
+get.sensitivity.objex(x)
+get.sensitivity.rhs(x)
+```
+***
+# Dummy Sources and Supply
+## Production scheduling for North Airplane Co.
+
+In this problem, the total production is 100, while the total installations are only 70. So, we create a dummy installation site. 
+
+* The variables xij refer to production in month i for installation in month j
+* What should it cost to produce and store for the dummy installation site?
+* Note that the objective function coefficients include the cost of storage
+* As it is not possible to produce in a month for an installation in the previous months, we rule that out by adding a high cost in the objective function. For example, x21 has a cost of 100. Similarly, x31 and x32. This is called the big M method. That is, to put a penalty to rule that out as a possible solution.
+* The complete formulation is below.
+
+```
+/* Objective function */
+min: 1.08 x11 + 1.095 x12 + 1.11 x13 + 1.225 x14 + 100 x21 + 1.11 x22 + 1.125 x23 + 1.14 x24 + 100 x31 + 100 x32 + 1.1 x33 + 1.115 x34 + 100 X41 + 100 X42 + 100 X43 + 1.13 X44;
+
+/* Constraints */
+x11 + x12 + x13 + x14 + x15 = 25;
+x21 + x22 + x23 + x24 + x25 = 35;
+x31 + x32 + x33 + x34 + x35 = 30;
+x41 + x42 + x43 + x44 + x45 = 10;
+x11 + x21 + x31 + x41 = 10;
+x12 + x22 + x32 + x42 = 15;
+x13 + x23 + x33 + x43 = 25;
+x14 + x24 + x34 + x44 = 20;
+x15 + x25 + x35 + x45 = 30;
+```
+```{r}
+library(lpSolveAPI)
+y <- read.lp("NorthAirplane.lp")
+y
+```
+
+Solve the problem. Remember that values of variables appear in the order as given in the formulation. As such, the last five values in the solution refer to the dummy installations.
+```{r}
+solve(y)
+get.objective(y)
+get.variables(y)
+```
+
+***
+# Assignment Problem
+## Job Shop example
+
+This example illustrates the assignment problem. The requirements for a feasible solution here are similar to the transportation problem. That is, the number of assignees must equal number of tasks. In addition, we require that the values of the variables be binary 0 (not assigned) of 1 (assigned). Note the use of the big "M" method for costs. The complete formulation is below
+
+```
+/* Objective function */
+min: 13 x11 + 16 x12 + 12 x13 + 11 x14 + 15 x21 + 1000 x22 + 13 x23 + 20 x24 + 5 x31 + 7 x32 + 10 x33 + 6 x34;
+
+/* Constraints */
+x11 + x12 + x13 + x14 = 1;
+x21 + x22 + x23 + x24 = 1;
+x31 + x32 + x33 + x34 = 1;
+x41 + x42 + x43 + x44 = 1;
+x11 + x21 + x31 + x41 = 1;
+x12 + x22 + x32 + x42 = 1;
+x13 + x23 + x33 + x43 = 1;
+x14 + x24 + x34 + x44 = 1;
+```
+```{r}
+library(lpSolveAPI)
+a <- read.lp("JobShop.lp")
+a
+```
+
+Solve the job shop example
+```{r}
+solve(a)
+get.objective(a)
+get.variables(a)
+```
+
+Notice that we did not have to specify either integer requirements, or even binary requirements on the variables.

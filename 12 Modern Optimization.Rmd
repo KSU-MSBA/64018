@@ -1,0 +1,207 @@
+---
+title: "12 Modern Optimization"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    highlight: textmate
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+Here, we explore the use of Simulated Annealing for three examples. 
+
+* The Rastrigin function
+* A constrained optimization problem
+* Portfolio optimization problem
+
+***
+
+First load the required packages. 
+
+Ref: Generalized Simulated Annealing for Global Optimization: The GenSA Package
+An Application to Non-Convex Optimization in Finance and Physics
+by Yang Xiang, Sylvain Gubian, Brian Suomela and Julia Hoeng
+
+
+```{r}
+library(GenSA)
+library(ggplot2)
+library(GA)
+```
+
+***
+
+# Rastrigin Function
+
+Let us now apply SA to the Rastrigin function in two dimensions
+```{r}
+Rastrigin <- function(x, y) {
+   x^2 + y^2 - 10 * (cos(2 * pi * x) + cos(2 * pi * y) - 2)
+}
+obj = function(z) {Rastrigin(z[1],z[2])}
+lower <- c(-4,-4)
+upper <- c(4,4)
+par <- c(2,2)
+```
+
+## Plot the function
+```{r}
+# Plot the function
+x=seq(-4,4,length=50) # tick marks on x axis
+y=seq(-4,4,length=50) # tick marks on y axis; defines grid for... 
+z=outer(x,y,Rastrigin) # matrix for plotting -- z vals / height of surface
+ persp3D(x, y, z, phi = 30, theta = 45,
+  xlab = "X", ylab = "Y",
+  main = "Surface elevation data",
+  color.palette = bl2gr.colors
+)
+filled.contour(x, y, z, color.palette = bl2gr.colors)
+```
+
+## Solve the Rastrigin problem using SA
+
+```{r}
+expected.val <- 0
+absTol <- 1e-13
+fn.call <- 0
+out <- GenSA(par=par,lower=lower,upper=upper,fn=obj)
+out[c("value","par","counts")]
+filled.contour(x, y, z, color.palette = bl2gr.colors, 
+      plot.axes = { axis(1);
+                    axis(2); points(out$par[1],out$par[2],
+                                    cex=2,col="red",lwd=2)}
+)
+```
+
+The optimal solution has been identified by GenSA.
+
+***
+
+# Constrained optimization
+
+Let us now take the second example, which is an example of constrained optimization. As we mentioned in the lectures, many times we convert constrained optimization to unconstrained optimization by including the constraints as part of the objective function. In this case, our constraints only set limits on x, and we can include that as part of the optimization.
+
+## Define the function and limits
+
+```{r}
+ nfun = function(x) {
+   (12*x^5-975*x^4+28000*x^3-345000*x^2+1800000*x)
+ }
+ll = c(0)
+ul = c(31)
+
+# Plot the function
+# Note, plotting as a maximization function
+p <- ggplot(data=data.frame(x=0),aes(x=x))
+p + stat_function(fun=nfun) + xlim(0,31)
+```
+
+## Solve using GenSA
+
+Note that GenSA only solves minimization problems by default
+```{r}
+nfun1 = function(x) { -nfun(x)} # convert to minimization
+ll = c(0)
+ul = c(31)
+par = 2
+out1 <- GenSA(par=par,lower=ll,upper=ul,fn=nfun1)
+out1[c("value","par","counts")]
+curve(nfun, from = 0, to = 31, n = 1000)
+points(out1$par[1],-out1$value, col = 2, pch = 19)
+```
+
+The optimal solution has been identified as x = 20. 
+
+***
+
+
+# Portfolio Optimization
+
+For our last example, we will use a portfolio optimization example. Please read 
+
+Reference: 
+
+* https://cran.r-project.org/web/packages/PortfolioAnalytics/vignettes/portfolio_vignette.pdf
+* https://journal.r-project.org/archive/2013/RJ-2013-002/RJ-2013-002.pdf
+
+
+Mean-risk models were developed in the 1950s for portfolio selection problems. Value-at-Risk (VaR) and Conditional Value-at-Risk (CVaR) are the most popular measures of downside risk. Mullen et al. (2011) and Ardia et al. (2011) used DEoptim to find the portfolio weights for which the portfolio has the lowest CVaR and each investment can contribute at most 22.5% to total portfolio CVaR risk. For details, please refer to Mullen et al. (2011); Ardia et al. (2011). The code for objective function in portfolio optimization are from Ardia et al. (2011) (https://journal.r-project.org/archive/2011/RJ-2011-005/RJ-2011-005.pdf)  
+Definition of VAR/CVAR: http://www.pacca.info/public/files/docs/public/finance/Active%20Risk%20Management/gpfl.pdf
+
+
+```{r}
+library("quantmod")
+tickers <- c("GE", "IBM", "GOOG", "AMZN", "AAPL")
+getSymbols(tickers, from = "2004-12-01", to = "2018-10-27", warnings = FALSE)
+P <- NULL
+for(ticker in tickers) {
+ tmp <- Cl(to.monthly(eval(parse(text = ticker))))
+ #print(tmp)
+ P <- cbind(P, tmp)
+}
+colnames(P) <- tickers
+R <- diff(log(P))
+R <- R[-1,]
+mu <- colMeans(R)
+sigma <- cov(R)
+library("PerformanceAnalytics")
+# We now use an equal weight portfolio
+pContribCVaR <- ES(weights = rep(0.2, 5), method = "gaussian", portfolio_method = "component", mu = mu, sigma = sigma)$pct_contrib_ES
+rbind(tickers, round(100 * pContribCVaR, 2)) # This outputs the percent contribution to portfolio risk
+round(100*mu,2) # Mean return
+round(100 * diag(sigma)^(1/2), 2) # Standard deviation 
+obj <- function(w) {
+ fn.call <<- fn.call + 1
+ if (sum(w) == 0) { w <- w + 1e-2 }
+  w <- w / sum(w)
+ CVaR <- ES(weights = w, method = "gaussian", portfolio_method = "component", mu = mu, sigma = sigma)
+ tmp1 <- CVaR$ES
+ tmp2 <- max(CVaR$pct_contrib_ES - 0.225, 0) #each investment contributes at most 22.5% to the portfolio CVaR risk
+# print(round(100 * CVaR$pct_contrib_ES, 2))
+
+ out <- tmp1 + 1e3 * tmp2 # note that here the budget constraint acts like a penalty. So big M is 1000.
+ return(out)
+}
+
+objmin <- function(w) {
+  -1 * obj(w)
+}
+```
+
+## Solve using GenSA
+```{r}
+set.seed(43298)
+fn.call <<- 0
+out.GenSA <- GenSA(fn = obj, lower = rep(0, 5), upper = rep(1, 5), control = list(smooth = FALSE, max.call = 3000))
+fn.call.GenSA <- fn.call
+out.GenSA$par # This gives the weights
+out.GenSA$value # objective function value 
+out.GenSA$counts
+cat("GenSA call functions", fn.call.GenSA, "times.\n")
+wstar.GenSA <- out.GenSA$par
+wstar.GenSA <- wstar.GenSA / sum(wstar.GenSA) # standardize the weights
+rbind(tickers, round(100 * wstar.GenSA, 2))
+mu
+mean(mu) # This specifies the return for an equal weight portfolio
+100 * (sum(wstar.GenSA * mu) - mean(mu)) # A positive value here indicates that this portfolio will have higher expected return than an equal weight portfolio
+```
+
+# Portfolio Optimization using Genetic Algorithms
+
+```{r}
+# Note the - sign in the fitness function
+# https://cran.r-project.org/web/packages/GA/vignettes/GA.html
+
+outGA <- ga(type = "real-valued",fitness= objmin ,lower=rep(0,5),upper=rep(1,5),popSize = 100)
+-1*outGA@fitnessValue
+wstar.GA <- outGA@solution # Weights
+wstar.GA <- wstar.GA / sum(wstar.GA)
+rbind(tickers,round(100*wstar.GA,2))
+100 * (sum(wstar.GA*mu)-mean(mu))
+
+```
+

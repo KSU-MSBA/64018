@@ -1,0 +1,31 @@
+---
+title: "7.1 Minimum Cost Flow"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    highlight: textmate
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+dir.create("images")
+```
+
+***
+This contains the LP formulation for the minimum cost flow problem detailed in the Module on Network Optimization models
+
+```{r}
+library(lpSolveAPI)
+x <- read.lp("mcf.lp")
+x
+```
+
+Solve the MCF problem
+```{r}
+solve(x)
+get.objective(x)
+get.variables(x)
+```
+

@@ -1,0 +1,109 @@
+---
+title: "Wyndsor Glass Example"
+output: 
+  html_notebook: 
+    theme: cerulean
+    highlight: textmate
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+dir.create("images")
+```
+
+***
+
+This notebook contains the code for the examples in Chapter 4. Specifically, the formulation for the Wyndsor Glass Company (WGC) example
+
+***
+
+If you have not yet installed the lpSolveAPI, use install.packages from the tools menu to do so. Or, just use the code below.
+
+* Note that lines that start with # are comments. 
+* At any point, use the Console to look for help about a particular function using ?. For ?make.lp() 
+* To run a chunk, the executable code, select the chunk, and use the Run button above to run that chunk. There are also keyboard shortcuts you can use to run chunks.
+
+```{r}
+install.packages("lpSolveAP")
+```
+
+Now, load the library
+```{r}
+library(lpSolveAPI)
+```
+
+***
+Let us set up the WGC problem. Note that we had two decision variables, and three constraints.
+In the first formulation, we will directly create the objective function and constraints
+```{r}
+# make an lp object with 0 constraints and 2 decision variables
+lprec <- make.lp(0, 2)
+
+# Now create the objective function. The default is a minimization problem. 
+set.objfn(lprec, c(3, 5))
+
+# As the default is a minimization problem, we change the direction to set maximization
+lp.control(lprec,sense='max')
+
+# Add the three Plant constraints
+add.constraint(lprec, c(1, 0), "<=", 4)
+add.constraint(lprec, c(0, 2), "<=", 12)
+add.constraint(lprec, c(3, 2), "<=", 18)
+
+# Set bounds for variables.
+# Remember that all variables had to be non-negative. We don't need to to do it here, as that is the default,
+# we can set bounds explicitly
+set.bounds(lprec, lower = c(0, 0), columns = c(1, 2)) #Not really needed
+
+# To identify the variables and constraints, we can
+# set variable names and name the constraints
+RowNames <- c("Plant1", "Plant2", "Plant3")
+ColNames <- c("Product1", "Product2")
+dimnames(lprec) <- list(RowNames, ColNames)
+
+# Now, print out the model
+lprec
+
+# The model can also be saved to a file
+write.lp(lprec, filename = "wgc.lp", type = "lp")
+
+
+```
+
+We now solve the above LP problem
+```{r}
+solve(lprec)
+```
+
+The output above doesn't indicate that the answer is 0, but that there was a successful solution
+We now output the value of the objective function, and the variables
+```{r}
+get.objective(lprec)
+get.variables(lprec)
+```
+
+The solution shows that the profit is 36, with the first variable value equal to 2, and the second variable value equal to 6
+One difficulty in reading the output is that lpsolveAPI will not write the variable name next to the solution. As such, you should remember that the variables values are output in the order in which it shows up in the lp formulation. In our case, it was Product 1 and then Product 2. 
+
+Before we look at other output values, let us consider using a different method to input the problem formuation. We will use the lp format by creating a text file that contains the WGC problem formulation. We also outputted an lp file using the write.lp statement above.
+Please now look at the Wyndsor.lp file. In RStudio, you can double click on the file in the Files list on the right pane.
+
+***
+
+We now read the lp formulation using an lp file. To read about about the lp format for files, you can read the documentation at http://lpsolve.sourceforge.net/5.5/lp-format.htm. 
+```{r}
+x <- read.lp("Wyndsor.lp") # create an lp object x
+x                          # display x
+```
+
+Solve the lp model
+```{r}
+solve(x)
+get.objective(x)        # get objective value
+get.variables(x)        # get values of decision variables
+get.constraints(x)      # get constraint RHS values
+```
+
+If you run all the chunks above, you can display the text, code, and output in an html file. Click on the 4.1-WBC.nb.html file in your directory from withing RStudio.
+
+You can also get the output in word, or pdf form by knitting the output. Use the Knit Document option from the File menu, or use the drop down menu from the Preview option above. 

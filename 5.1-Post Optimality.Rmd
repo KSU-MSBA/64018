@@ -1,0 +1,45 @@
+---
+title: "Wyndsor Glass Example - Post Optimality Analysis"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    highlight: textmate
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+dir.create("images")
+```
+
+***
+
+This notebook contains the code for the examples in Chapter 5. Specifically, for postoptimality analysis.
+
+```{r}
+library(lpSolveAPI)
+```
+
+***
+
+Read the WGC example from file
+
+```{r}
+x <- read.lp("Wyndsor.lp") # create an lp object x
+x                          # display x
+```
+
+Solve the lp model
+```{r}
+solve(x)
+get.objective(x)        # get objective value
+get.variables(x)        # get values of decision variables
+get.constraints(x)      # get constraint RHS values
+get.sensitivity.rhs(x)  # get shadow prices
+get.sensitivity.obj(x)  # get reduced cost
+```
+
+Note that the shadow prices are expressed here under $duals. For example, the shadow prices for  constraint 1 is 0, for 2 is 1.5, and for 3 is 1. The last two values refer to the non-negativity constraints. We also have valid ranges for shadow price calculations. Those are given under $dualsfrom and $dualstill. Note for constraint 2 it is from 6 to 16, exactly what we found through the graphical method
+
+The reduced costs are expressed here until $objfrom and $objtill. The output here indicates that as long as the contribution to profit for product 1 is between 0 and 7.5, it can remain in the solution. Similarly, 2 <= C2 <= infinity, where c2 is the contribution to profit for x2, x2 will be part of the final solution. If c2 < 2, then x2 will no longer be part of the final solution.

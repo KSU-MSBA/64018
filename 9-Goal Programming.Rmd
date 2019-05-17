@@ -1,0 +1,102 @@
+---
+title: "Goal Programming"
+output:
+  html_document:
+    df_print: paged
+  html_notebook:
+    highlight: textmate
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+***
+This document contains the code for all examples in the Goal Programming module
+
+# Dewright Co.
+
+```{r}
+library(lpSolveAPI)
+gp <- read.lp("dewright.lp")
+gp
+```
+## Solve
+```{r}
+solve(gp)
+get.objective(gp)
+get.variables(gp)
+```
+
+### Remarks
+
+Applying the simplex method to this formulation yields an optimal solution of y1m = 0, y2p = 8.33, y2m = 0, y3p = 0, x1 = 8.33, x2 = 0, x3 = 1.67, y1p = 0, y3m = 0. Note that the solution is given in the order in which the variables appear in the formulation. This implies that y1 = 0 and y3 = 0, so the first and third goals are fully satisfied, but the employment goal is exceeded by 8.33 (833 employees). The resulting penalty from exceeding the goals is 16.67. 
+
+***
+
+# Preemptive Goal Programming - Sequential Approach
+## Dewright Co. - First Stage
+
+Faced with the unpleasant recommendation to increase the company’s work- force by more than 20 percent, the management has reconsidered the original formulation of the problem that was summarized in the earlier Table. This increase in workforce probably would be a rather temporary one, so the very high cost of training 833 new employees would be largely wasted, and the large (undoubtedly well- publicized) layoffs would make it more difficult for the company to attract high-quality employees in the future. Consequently, management has concluded that a very high priority should be placed on avoiding an increase in the workforce. Furthermore, management has learned that raising more than $55 million for capital investment for the new products would be extremely difficult, so a very high priority also should be placed on avoiding capital investment above this level.
+
+### Formulation and Solution
+```{r}
+gp_fs <- read.lp("dewright_firststage.lp")
+gp_fs
+```
+
+```{r}
+solve(gp_fs)
+get.objective(gp_fs)
+get.variables(gp_fs)
+```
+
+The solution is Z = 0, with x1 = 8, and y3m = 15. As we have an optimal solution, we can now go to the second stage of optimization by setting y2p and y3p = 0 in the second stage formulation.
+
+***
+
+## Dewright Co. - Second Stage
+```{r}
+gp_ss <- read.lp("dewright_secondstage.lp")
+gp_ss
+```
+```{r}
+solve(gp_ss)
+get.objective(gp_ss)
+get.variables(gp_ss)
+```
+
+The optimal solution is unique, and requires no further goals, so we can stop here. The final solution is x1 = 5,	x2 = 0, x3 = 3.75. This solution fully achieves both first-priority goals as well as one of the second-priority goals (no decrease in employment level), and it falls short of the other second-priority goal (long-run profit >= 125) by just 8.75.
+
+***
+
+# Dewright Co. - Streamlined Approach
+```{r}
+gp_sl <- read.lp("dewright_streamline.lp")
+gp_sl
+```
+
+```{r}
+solve(gp_sl)
+get.objective(gp_sl)
+get.variables(gp_sl)
+```
+This solution is exactly as what we achieved with the two-stage process. First priority goals are met, and the optimal solution falls short of the second-priority goals with respect to long-run profit.
+
+***
+
+# Maximizing Progress towards All Objectives
+
+* Goal programming requires establishing goals for all objectives. What if some objectives were open ended?
+* In open-ended objectives, there is no minimum (standard) goal. As such, we want to make progress on all objectives simultaneously.
+* Thus, the appropriate objective is to maximize the minimum progress toward all objectives.
+
+## Formulation and Solution
+```{r}
+mx <- read.lp("maxmin.lp")
+mx
+solve(mx)
+get.objective(mx)
+get.variables(mx)
+```
