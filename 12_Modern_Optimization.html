@@ -311,7 +311,7 @@ points(out1$par[1],-out1$value, col = 2, pch = 19)</code></pre>
 Definition of VAR/CVAR: <a href="http://www.pacca.info/public/files/docs/public/finance/Active%20Risk%20Management/gpfl.pdf">http://www.pacca.info/public/files/docs/public/finance/Active%20Risk%20Management/gpfl.pdf</a></p>
 <pre class="r"><code>library(&quot;quantmod&quot;)
 tickers &lt;- c(&quot;GE&quot;, &quot;IBM&quot;, &quot;GOOG&quot;, &quot;AMZN&quot;, &quot;AAPL&quot;)
-getSymbols(tickers, from = &quot;2004-12-01&quot;, to = &quot;2018-10-27&quot;)</code></pre>
+getSymbols(tickers, from = &quot;2004-12-01&quot;, to = &quot;2018-10-27&quot;, warnings = FALSE)</code></pre>
 <pre><code>## [1] &quot;GE&quot;   &quot;IBM&quot;  &quot;GOOG&quot; &quot;AMZN&quot; &quot;AAPL&quot;</code></pre>
 <pre class="r"><code>P &lt;- NULL
 for(ticker in tickers) {
@@ -327,16 +327,20 @@ sigma &lt;- cov(R)
 library(&quot;PerformanceAnalytics&quot;)
 # We now use an equal weight portfolio
 pContribCVaR &lt;- ES(weights = rep(0.2, 5), method = &quot;gaussian&quot;, portfolio_method = &quot;component&quot;, mu = mu, sigma = sigma)$pct_contrib_ES
-rbind(tickers, round(100 * pContribCVaR, 2)) # This outputs the percent contribution to portfolio risk</code></pre>
+print(&quot;Equal Weights Portfolio&quot;)</code></pre>
+<pre><code>## [1] &quot;Equal Weights Portfolio&quot;</code></pre>
+<pre class="r"><code>print(&quot;The percent contribution to portfolio risk is:&quot;)</code></pre>
+<pre><code>## [1] &quot;The percent contribution to portfolio risk is:&quot;</code></pre>
+<pre class="r"><code>rbind(tickers, round(100 * pContribCVaR, 2)) # This outputs the percent contribution to portfolio risk</code></pre>
 <pre><code>##         [,1]    [,2]    [,3]    [,4]    [,5]   
 ## tickers &quot;GE&quot;    &quot;IBM&quot;   &quot;GOOG&quot;  &quot;AMZN&quot;  &quot;AAPL&quot; 
 ##         &quot;18.52&quot; &quot;13.52&quot; &quot;20.03&quot; &quot;26.11&quot; &quot;21.82&quot;</code></pre>
-<pre class="r"><code>round(100*mu,2) # Mean return</code></pre>
-<pre><code>##    GE   IBM  GOOG  AMZN  AAPL 
-## -0.71  0.14  1.45  2.18  2.32</code></pre>
-<pre class="r"><code>round(100 * diag(sigma)^(1/2), 2) # Standard deviation </code></pre>
-<pre><code>##    GE   IBM  GOOG  AMZN  AAPL 
-##  7.83  5.59  8.20 10.46  9.31</code></pre>
+<pre class="r"><code>cat(&quot;Return from portfolio = &quot;,round(100*mu,2), &quot;\n&quot;) #  return</code></pre>
+<pre><code>## Return from portfolio =  -0.71 0.14 1.45 2.18 2.32</code></pre>
+<pre class="r"><code>cat(&quot;Average return from portfolio = &quot;,round(mean(mu)*100,2),&quot;\n&quot;) # average return for equal weights portfolio</code></pre>
+<pre><code>## Average return from portfolio =  1.08</code></pre>
+<pre class="r"><code>cat(&quot;Standard deviation from portfolio = &quot;, round(100 * diag(sigma)^(1/2), 2),&quot;\n&quot;) # Standard deviation </code></pre>
+<pre><code>## Standard deviation from portfolio =  7.83 5.59 8.2 10.46 9.31</code></pre>
 <pre class="r"><code>obj &lt;- function(w) {
  fn.call &lt;&lt;- fn.call + 1
  if (sum(w) == 0) { w &lt;- w + 1e-2 }
@@ -344,8 +348,7 @@ rbind(tickers, round(100 * pContribCVaR, 2)) # This outputs the percent contribu
  CVaR &lt;- ES(weights = w, method = &quot;gaussian&quot;, portfolio_method = &quot;component&quot;, mu = mu, sigma = sigma)
  tmp1 &lt;- CVaR$ES
  tmp2 &lt;- max(CVaR$pct_contrib_ES - 0.225, 0) #each investment contributes at most 22.5% to the portfolio CVaR risk
-# print(round(100 * CVaR$pct_contrib_ES, 2))
-
+ 
  out &lt;- tmp1 + 1e3 * tmp2 # note that here the budget constraint acts like a penalty. So big M is 1000.
  return(out)
 }
@@ -353,6 +356,8 @@ rbind(tickers, round(100 * pContribCVaR, 2)) # This outputs the percent contribu
 objmin &lt;- function(w) {
   -1 * obj(w)
 }</code></pre>
+<p>Looking at the results we see that in this equal-weight portfolio, a 20% investment in AMZN causes 26.11% of the CVaR risk in the portfolio, while a 20% investment in IBM only causes a 13.52% risk. This is probably because of the high standard deviation 10.46, in percent, of AMZN compared to IBM, 5.59.</p>
+<p>Let us now calculate the weights of this portfolio to minimize CVaR for the portfolio, where each investment can only contribute at most 22.5%</p>
 <div id="solve-using-gensa-1" class="section level2">
 <h2>Solve using GenSA</h2>
 <pre class="r"><code>set.seed(43298)
@@ -363,23 +368,24 @@ out.GenSA$par # This gives the weights</code></pre>
 <pre><code>## [1] 0.7133836 0.9714053 0.7122641 0.2950518 0.6378106</code></pre>
 <pre class="r"><code>out.GenSA$value # objective function value </code></pre>
 <pre><code>## [1] 0.1021233</code></pre>
-<pre class="r"><code>out.GenSA$counts</code></pre>
-<pre><code>## [1] 3000</code></pre>
-<pre class="r"><code>cat(&quot;GenSA call functions&quot;, fn.call.GenSA, &quot;times.\n&quot;)</code></pre>
+<pre class="r"><code>#out.GenSA$counts
+cat(&quot;GenSA call functions&quot;, fn.call.GenSA, &quot;times.\n&quot;)</code></pre>
 <pre><code>## GenSA call functions 3000 times.</code></pre>
 <pre class="r"><code>wstar.GenSA &lt;- out.GenSA$par
 wstar.GenSA &lt;- wstar.GenSA / sum(wstar.GenSA) # standardize the weights
-rbind(tickers, round(100 * wstar.GenSA, 2))</code></pre>
+cat(&quot;Weights in minimum-risk portolio \n&quot;)</code></pre>
+<pre><code>## Weights in minimum-risk portolio</code></pre>
+<pre class="r"><code>rbind(tickers, round(100 * wstar.GenSA, 2))</code></pre>
 <pre><code>##         [,1]    [,2]    [,3]    [,4]   [,5]   
 ## tickers &quot;GE&quot;    &quot;IBM&quot;   &quot;GOOG&quot;  &quot;AMZN&quot; &quot;AAPL&quot; 
 ##         &quot;21.42&quot; &quot;29.17&quot; &quot;21.39&quot; &quot;8.86&quot; &quot;19.15&quot;</code></pre>
-<pre class="r"><code>mu</code></pre>
-<pre><code>##           GE          IBM         GOOG         AMZN         AAPL 
-## -0.007063310  0.001420265  0.014547081  0.021767497  0.023196446</code></pre>
-<pre class="r"><code>mean(mu) # This specifies the return for an equal weight portfolio</code></pre>
-<pre><code>## [1] 0.0107736</code></pre>
-<pre class="r"><code>100 * (sum(wstar.GenSA * mu) - mean(mu)) # A positive value here indicates that this portfolio will have higher expected return than an equal weight portfolio</code></pre>
-<pre><code>## [1] -0.2389105</code></pre>
+<pre class="r"><code>cat(&quot;Return for equal weights portfolio = &quot;,round(mu*100, 2),&quot;\n&quot;)</code></pre>
+<pre><code>## Return for equal weights portfolio =  -0.71 0.14 1.45 2.18 2.32</code></pre>
+<pre class="r"><code>cat(&quot;Average return for equal weights portfolio = &quot;,round(mean(mu)*100,2),&quot;\n&quot;) # This specifies the return for an equal weight portfolio</code></pre>
+<pre><code>## Average return for equal weights portfolio =  1.08</code></pre>
+<pre class="r"><code>cat(&quot;Expected return compared to equal-weights portfolio = &quot;,100 * (sum(wstar.GenSA * mu) - mean(mu)),&quot;\n&quot;) # A positive value here indicates that this portfolio will have higher expected return than an equal weight portfolio</code></pre>
+<pre><code>## Expected return compared to equal-weights portfolio =  -0.2389105</code></pre>
+<p>Note the relatively low weight given to AMZN (8.86), and the large weight for IBM (29.17) in this, compared to the equal weights portfolio. This minimum risk portfolio, however, does not have a higher expected return than the equal-weights portfolio. It is possible to modify our objective criteria to address this. Please see <a href="https://journal.r-project.org/archive/2011/RJ-2011-005/RJ-2011-005.pdf" class="uri">https://journal.r-project.org/archive/2011/RJ-2011-005/RJ-2011-005.pdf</a> for additional insight.</p>
 </div>
 </div>
 <div id="portfolio-optimization-using-genetic-algorithms" class="section level1">
@@ -398,6 +404,7 @@ rbind(tickers,round(100*wstar.GA,2))</code></pre>
 ##         &quot;21.3&quot; &quot;28.81&quot; &quot;19.13&quot; &quot;12.61&quot; &quot;18.15&quot;</code></pre>
 <pre class="r"><code>100 * (sum(wstar.GA*mu)-mean(mu))</code></pre>
 <pre><code>## [1] -0.2128918</code></pre>
+<p>Note that the solution here differs slightly from that obtained with SA.</p>
 </div>
 
 
