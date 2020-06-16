@@ -24,7 +24,7 @@ If you have not yet installed the lpSolveAPI, use install.packages from the tool
 * To run a chunk, the executable code, select the chunk, and use the Run button above to run that chunk. There are also keyboard shortcuts you can use to run chunks.
 
 ```{r}
-install.packages("lpSolveAP")
+install.packages("lpSolveAPI")
 ```
 
 Now, load the library
