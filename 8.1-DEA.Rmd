@@ -70,11 +70,14 @@ e <- dea(x,y,RTS = "crs")            # provide the input and output
 e
 peers(e)                             # identify the peers
 lambda(e)                            # identify the relative weights given to the peers
-#dea.plot.isoquant(x,y,RTS="crs")     # plot the results
 ```
+Now, let's plot the results
 ***
 The results indicate that DMUs 1, 3, and 5 are efficient. DMU(2) is only 83% efficient, and DMU(4) is 92% efficient. This is what we found in our initial discussion. Further, the peer units for DMU(2) are 1 and 3, with relative weights 0.16 and 0.68. Similary for DMU(4), the peer units are 3 and 5, with weights 0.46 and 0.46, respectively.
 ***
+```{r}
+dea.plot.transform(y[,1],y[,2],RTS=3)     # plot the results
+```
 
 Can you rerun the above model by changing RTS type from CRS to other models? You can type ?dea in the console to get the help file for dea, and the possible values for RTS.
 
